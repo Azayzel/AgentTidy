@@ -25,6 +25,14 @@ to:
 agenttidy mcp --server filesystem --collector http://127.0.0.1:4318 -- npx -y @modelcontextprotocol/server-filesystem /repo
 ```
 
+For a remote Streamable HTTP MCP server, connect through its URL instead:
+
+```text
+agenttidy mcp --server remote --url https://mcp.example.com/mcp --collector http://127.0.0.1:4318
+```
+
+Pass authentication headers with repeated `--header 'NAME: VALUE'` options. HTTP mode supports JSON and SSE responses; older HTTP+SSE transport servers are not supported.
+
 Set `AGENT_TRACE_ID` and `AGENT_SESSION_ID` in the parent chat/agent process to correlate MCP activity with a chat.
 
 ## 3. Emit chat metrics

@@ -27,6 +27,14 @@ Wrap an MCP stdio server:
 node dist/src/cli.js mcp --server filesystem --collector http://127.0.0.1:4318 -- npx -y @modelcontextprotocol/server-filesystem .
 ```
 
+Connect to a Streamable HTTP MCP server (add `--header 'Authorization: ******'` for authenticated servers):
+
+```bash
+node dist/src/cli.js mcp --server remote --url https://mcp.example.com/mcp --collector http://127.0.0.1:4318
+```
+
+The HTTP mode bridges the agent's stdio MCP connection to the remote endpoint and supports JSON or SSE responses.
+
 Get a terminal report:
 
 ```bash
