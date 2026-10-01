@@ -48,8 +48,10 @@ export class McpHttpProxyClient {
       const messages = response.headers.get("content-type")?.includes("text/event-stream")
         ? parseSse(body)
         : parseJson(body);
+      const initializedVersion = stringValue(record(messages.find((message) => message.id === request?.id)?.result)?.protocolVersion);
 
       if (messages.length > 0) {
+        this.protocolVersion = response.headers.get("mcp-protocol-version") ?? initializedVersion ?? requestVersion ?? this.protocolVersion;
         for (const message of messages) this.tracker.serverLine(JSON.stringify(message));
         return messages.map((message) => JSON.stringify(message));
       }
@@ -62,11 +64,13 @@ export class McpHttpProxyClient {
 
   private errorResponse(request: Record<string, unknown> | undefined): string[] {
     if (!request || !isId(request.id)) return [];
-    return [JSON.stringify({
+    const response = JSON.stringify({
       jsonrpc: "2.0",
       id: request.id,
       error: { code: -32000, message: "HTTP MCP request failed" }
-    })];
+    });
+    this.tracker.serverLine(response);
+    return [response];
   }
 }
 

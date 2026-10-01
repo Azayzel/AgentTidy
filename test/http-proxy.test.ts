@@ -89,21 +89,28 @@ test("returns a JSON-RPC error when an HTTP MCP request fails", async () => {
     response.end("unauthorized");
   });
   const url = await listen(server);
+  const sink = new MemorySink();
   const client = new McpHttpProxyClient({
     url,
     server: "remote",
     traceId: "trace",
     sessionId: "session",
-    sink: new MemorySink()
+    sink
   });
 
   try {
-    const response = await client.send(JSON.stringify({ jsonrpc: "2.0", id: "req-1", method: "tools/list" }));
+    const response = await client.send(JSON.stringify({
+      jsonrpc: "2.0",
+      id: "req-1",
+      method: "tools/call",
+      params: { name: "search", arguments: {} }
+    }));
     assert.deepEqual(JSON.parse(response[0]!), {
       jsonrpc: "2.0",
       id: "req-1",
       error: { code: -32000, message: "HTTP MCP request failed" }
     });
+    assert.equal(sink.spans.some((span) => span.kind === "mcp.tool.result" && span.success === false), true);
   } finally {
     await close(server);
   }
