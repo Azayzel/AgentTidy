@@ -1,0 +1,42 @@
+{
+  "name": "agenttidy",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Local-first observability and waste linting for AI chats, MCP tools, skills, and model usage.",
+  "type": "module",
+  "bin": {
+    "agenttidy": "dist/src/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test dist/test/*.test.js",
+    "start": "node dist/src/cli.js"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "25.1.0",
+    "typescript": "5.8.3"
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "agents",
+    "mcp",
+    "observability",
+    "llm",
+    "tokens",
+    "cost",
+    "developer-tools"
+  ]
+}
