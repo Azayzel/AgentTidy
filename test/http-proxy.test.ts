@@ -19,8 +19,8 @@ test("forwards Streamable HTTP requests and tracks JSON and SSE responses", asyn
     for await (const chunk of request) chunks.push(Buffer.from(chunk));
     requests.push({
       body: Buffer.concat(chunks).toString("utf8"),
-      sessionId: request.headers["mcp-session-id"],
-      protocolVersion: request.headers["mcp-protocol-version"]
+      sessionId: headerValue(request.headers["mcp-session-id"]),
+      protocolVersion: headerValue(request.headers["mcp-protocol-version"])
     });
 
     if (requests.length === 1) {
@@ -119,4 +119,8 @@ async function close(server: ReturnType<typeof createServer>): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     server.close((error) => error ? reject(error) : resolve());
   });
+}
+
+function headerValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value.join(", ") : value;
 }
