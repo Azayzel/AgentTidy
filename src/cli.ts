@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { buildReport } from "./analyze.js";
 import { startCollector } from "./collector/server.js";
 import { newId } from "./ids.js";
+import { runMcpHttpProxy } from "./mcp/http-proxy.js";
 import { runMcpProxy } from "./mcp/proxy.js";
 import type { Report } from "./model.js";
 import { HttpSink, StoreSink, type SpanSink } from "./sink.js";
@@ -52,12 +53,14 @@ function report(args: string[]): void {
 
 async function mcp(args: string[]): Promise<void> {
   const separator = args.indexOf("--");
-  if (separator < 0 || separator === args.length - 1) throw new Error("mcp requires: -- <server command> [args]");
-  const options = args.slice(0, separator);
-  const command = args[separator + 1];
-  if (!command) throw new Error("missing MCP server command");
-  const commandArgs = args.slice(separator + 2);
-  const server = option(options, "--server") ?? command;
+  const options = separator < 0 ? args : args.slice(0, separator);
+  const url = option(options, "--url");
+  if (url && separator >= 0) throw new Error("--url cannot be combined with a server command");
+  if (!url && (separator < 0 || separator === args.length - 1)) throw new Error("mcp requires: --url URL or -- <server command> [args]");
+  const command = separator >= 0 ? args[separator + 1] : undefined;
+  if (!url && !command) throw new Error("missing MCP server command");
+  const commandArgs = separator >= 0 ? args.slice(separator + 2) : [];
+  const server = option(options, "--server") ?? (url ? new URL(url).hostname : command!);
   const traceId = option(options, "--trace") ?? process.env.AGENT_TRACE_ID ?? newId();
   const sessionId = option(options, "--session") ?? process.env.AGENT_SESSION_ID ?? traceId;
   const collector = option(options, "--collector") ?? process.env.AGENTTIDY_URL;
@@ -65,8 +68,23 @@ async function mcp(args: string[]): Promise<void> {
   if (collector) sink = new HttpSink(collector);
   else sink = new StoreSink(new SqliteSpanStore(option(options, "--db") ?? DEFAULT_DB));
 
-  const code = await runMcpProxy({ command, args: commandArgs, server, traceId, sessionId, sink });
+  const code = url
+    ? await runMcpHttpProxy({ url, headers: headerOptions(options), server, traceId, sessionId, sink })
+    : await runMcpProxy({ command: command!, args: commandArgs, server, traceId, sessionId, sink });
   process.exitCode = code;
+}
+
+function headerOptions(args: readonly string[]): Array<[string, string]> {
+  const headers: Array<[string, string]> = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== "--header") continue;
+    const value = args[index + 1];
+    const separator = value?.indexOf(":") ?? -1;
+    if (separator < 1) throw new Error("--header requires a NAME: VALUE");
+    headers.push([value!.slice(0, separator).trim(), value!.slice(separator + 1).trim()]);
+    index += 1;
+  }
+  return headers;
 }
 
 function printReport(report: Report): void {
@@ -115,7 +133,7 @@ function numberOption(args: readonly string[], name: string, fallback: number): 
 
 function help(error?: string): void {
   if (error) console.error(error);
-  console.log(`agenttidy\n\nCommands:\n  serve  [--host 127.0.0.1] [--port 4318] [--db PATH]\n  report [--db PATH] [--trace ID] [--json]\n  mcp    [--server NAME] [--collector URL | --db PATH] [--trace ID] [--session ID] -- COMMAND [ARGS]\n`);
+  console.log(`agenttidy\n\nCommands:\n  serve  [--host 127.0.0.1] [--port 4318] [--db PATH]\n  report [--db PATH] [--trace ID] [--json]\n  mcp    [--server NAME] [--collector URL | --db PATH] [--trace ID] [--session ID] -- COMMAND [ARGS]\n  mcp    [--server NAME] [--url URL] [--header NAME:VALUE]... [--collector URL | --db PATH] [--trace ID] [--session ID]\n`);
 }
 
 main(process.argv.slice(2)).catch((error) => {
